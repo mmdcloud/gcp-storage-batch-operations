@@ -1,12 +1,18 @@
 # -------------------------------------------------------------------------------
 # Service Accounts & Core Identifiers
 # -------------------------------------------------------------------------------
-data "google_storage_transfer_project_service_account" "default" {
-  project = var.project_id
-}
-
 resource "random_id" "id" {
   byte_length = 8
+}
+
+data "google_project" "project" {}
+
+module "gcs_updates" {
+  source        = "./modules/pubsub"
+  topic_name    = var.gcs_updates_topic_name
+  enable_schema = false
+  topic_iam     = {}
+  subscriptions = {}
 }
 
 module "source_bucket" {
@@ -53,11 +59,42 @@ module "delete_from_manifest" {
   }
 }
 
+resource "google_kms_key_ring" "gcs" {
+  name     = "${var.source_bucket_name_prefix}-keyring"
+  location = var.source_bucket_location # must match the bucket location
+  project  = var.project_id
+}
+
+resource "google_kms_crypto_key" "key" {
+  name            = "${var.source_bucket_name_prefix}-key"
+  key_ring        = google_kms_key_ring.gcs.id
+  rotation_period = "7776000s" # 90 days
+  purpose         = "ENCRYPT_DECRYPT"
+
+  version_template {
+    algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+    protection_level = "SOFTWARE" # use "HSM" if you need it
+  }
+
+  lifecycle {
+    prevent_destroy = false # set true outside of dev; keys can't be fully deleted
+  }
+}
+
+
+# Storage Batch Operations service agent (performs the rewrite)
+resource "google_kms_crypto_key_iam_member" "batch_ops_agent" {
+  crypto_key_id = google_kms_crypto_key.key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-storagebatchoperations.iam.gserviceaccount.com"
+}
+
 module "rekey_job" {
   source = "./modules/cloud-batch-operations"
 
-  job_id = "rekey"
-  bucket = module.source_bucket.bucket_name
+  job_id                   = "rekey"
+  included_object_prefixes = [""]
+  bucket                   = module.source_bucket.bucket_name
 
   rewrite_object = {
     kms_key = google_kms_crypto_key.key.id
@@ -67,10 +104,10 @@ module "rekey_job" {
 module "object_hold_job" {
   source = "./modules/cloud-batch-operations"
 
-  job_id = "object-hold-job"
-  bucket = module.source_bucket.bucket_name
+  job_id                   = "object-hold-job"
+  included_object_prefixes = [""]
+  bucket                   = module.source_bucket.bucket_name
   put_object_hold = {
-    event_based_hold = ""
-    temporary_hold   = ""
+    event_based_hold = "SET"
   }
 }

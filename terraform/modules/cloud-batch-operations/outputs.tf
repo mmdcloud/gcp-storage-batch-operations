@@ -7,8 +7,3 @@ output "job_id" {
   description = "Job ID."
   value       = google_storage_batch_operations_job.this.job_id
 }
-
-output "name" {
-  description = "Fully qualified job name."
-  value       = google_storage_batch_operations_job.this.name
-}

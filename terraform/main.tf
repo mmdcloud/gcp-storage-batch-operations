@@ -1,3 +1,20 @@
+# Storage Intelligence must be enabled for batch operations to work
+resource "google_storage_control_project_intelligence_config" "project_intel" {
+  # The project ID or project number
+  name           = var.project_id
+  edition_config = "STANDARD"
+
+  # Optional: Define bucket filters to narrow down the scope
+  filter {
+    included_cloud_storage_locations {
+      locations = ["us-central1", "asia-south"]
+    }
+    excluded_cloud_storage_buckets {
+      bucket_id_regexes = ["temp-cache-*", "test-bucket-*"]
+    }
+  }
+}
+
 # -------------------------------------------------------------------------------
 # Service Accounts & Core Identifiers
 # -------------------------------------------------------------------------------
@@ -42,7 +59,7 @@ module "set_metadata_job" {
   included_object_prefixes = ["bkt"]
 
   put_metadata = {
-    custom_metadata = { key = "value" }
+    custom_metadata = { name = "madmax" }
   }
 }
 

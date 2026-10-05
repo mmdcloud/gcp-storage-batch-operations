@@ -52,7 +52,7 @@ module "source_bucket" {
 }
 
 module "set_metadata_job" {
-  source = "./modules/cloud-batch-operations"
+  source = "./modules/cloud-batch-operations/metadata"
 
   job_id                   = "tf-job"
   bucket                   = module.source_bucket.bucket_name
@@ -64,7 +64,7 @@ module "set_metadata_job" {
 }
 
 module "delete_from_manifest" {
-  source = "./modules/cloud-batch-operations"
+  source = "./modules/cloud-batch-operations/delete"
 
   job_id            = "purge-old"
   bucket            = module.source_bucket.bucket_name
@@ -107,7 +107,7 @@ resource "google_kms_crypto_key_iam_member" "batch_ops_agent" {
 }
 
 module "rekey_job" {
-  source = "./modules/cloud-batch-operations"
+  source = "./modules/cloud-batch-operations/rewrite"
 
   job_id                   = "rekey"
   included_object_prefixes = [""]
@@ -119,7 +119,7 @@ module "rekey_job" {
 }
 
 module "object_hold_job" {
-  source = "./modules/cloud-batch-operations"
+  source = "./modules/cloud-batch-operations/hold"
 
   job_id                   = "object-hold-job"
   included_object_prefixes = [""]

@@ -35,26 +35,4 @@ resource "google_storage_batch_operations_job" "this" {
       custom_metadata     = put_metadata.value.custom_metadata
     }
   }
-
-  dynamic "delete_object" {
-    for_each = var.delete_object != null ? [var.delete_object] : []
-    content {
-      permanent_object_deletion_enabled = delete_object.value.permanent_object_deletion_enabled
-    }
-  }
-
-  dynamic "put_object_hold" {
-    for_each = var.put_object_hold != null ? [var.put_object_hold] : []
-    content {
-      event_based_hold = put_object_hold.value.event_based_hold
-      temporary_hold   = put_object_hold.value.temporary_hold
-    }
-  }
-
-  dynamic "rewrite_object" {
-    for_each = var.rewrite_object != null ? [var.rewrite_object] : []
-    content {
-      kms_key = rewrite_object.value.kms_key
-    }
-  }
 }
